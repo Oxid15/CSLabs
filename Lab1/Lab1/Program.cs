@@ -1,8 +1,8 @@
 ﻿using System;
+using System.IO;
+using System.Runtime.Serialization;
 using System.Collections.Generic;
-//using System.Linq;
-//using System.Text;
-//using System.Threading.Tasks;
+using System.Web.Script.Serialization;
 
 namespace Lab1
 {
@@ -113,7 +113,7 @@ namespace Lab1
 
 	class Organization
 	{
-		private List<Employee> list;
+		public List<Employee> list;          //////// private?
 		public decimal avgFee { get; private set; }
 
 		public Organization()
@@ -136,6 +136,19 @@ namespace Lab1
 			avgFeeCompute();
 		}
 
+		public void del(int ID)
+		{
+			int size = list.Count;
+			for (int i = 0; i < size; i++)
+			{
+				if (list[i].ID == ID)
+				{
+					list.Remove(list[i]);
+					break;
+				}
+			}
+		}
+
 		public void avgFeeCompute()
 		{
 			decimal sum = 0;
@@ -143,7 +156,6 @@ namespace Lab1
 			{
 				sum += list[i].fee;
 			}
-
 			avgFee = sum / list.Count;
 		}
 
@@ -153,15 +165,15 @@ namespace Lab1
 			list.Sort(c);
 		}
 
-		//void fileInput()
-		//{
+		public void fileInput(string fileName)
+		{
 
-		//}
+		}
 
-		//void fileOutput()
-		//{
-
-		//}
+		public void fileOutput(string fileName)
+		{
+			
+		}
 	}
 
 	class Program
@@ -171,7 +183,7 @@ namespace Lab1
 			EmployeeFixedFee e1 = new EmployeeFixedFee(0, null, null, null, 10, 0, DateTime.MinValue);
 			EmployeeFixedFee e2 = new EmployeeFixedFee(1, null, null, null, 30, 0, DateTime.MinValue);
 			EmployeeFixedFee e3 = new EmployeeFixedFee(2, null, "bbbbb", null, 20, 0, DateTime.MinValue);
-			EmployeeFixedFee e4 = new EmployeeFixedFee(2, null, "aaaaa", null, 20, 0, DateTime.MinValue);
+			EmployeeFixedFee e4 = new EmployeeFixedFee(3, null, "aaaaa", null, 20, 0, DateTime.MinValue);
 
 			Organization o = new Organization();
 			o.add(e1);
@@ -179,14 +191,44 @@ namespace Lab1
 			o.add(e3);
 			o.add(e4);
 
+			o.del(3);
+
 			o.sort();
 			o.avgFeeCompute();
+
+			o.fileOutput("org.json");
+			Organization o2 = new Organization();
+
+			o2.fileInput("org.json");
+
 			Console.ReadKey();
 		}
+}
+	//class Menu
+	//{
+	//	static void info()
+	//	{
 
-		//static void menu()
-		//{
+	//	}
 
-		//}
-	}
+	//	static void topFive()
+	//	{
+
+	//	}
+
+	//	static void bottomThree()
+	//	{
+
+	//	}
+
+	//	static void xmlOutput(string fileName)
+	//	{
+
+	//	}
+
+	//	static void jsonOutput(string fileName)
+	//	{
+
+	//	}
+	//}
 }
