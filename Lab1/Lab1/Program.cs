@@ -1,26 +1,33 @@
-﻿// 1. уровень доступа полей и функций get set
-// 2. приватность сериализуемых полей
-// 3. абстрактность сериализуемых классов
-// 4. сортировка списка при добавлении
-
-using System;
+﻿using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Runtime.Serialization.Json;
 using System.Xml.Serialization;
-using System.Web.Script.Serialization;
+using System.Runtime.Serialization;
 
 namespace Lab1
 {
-	public /*abstract*/ class Employee
+	[XmlInclude(typeof(EmployeeFixedFee))]
+	[XmlInclude(typeof(EmployeeHourlyFee))]
+	[DataContract]
+	public abstract class Employee
 	{
-		public int ID { get; private set; }
-		public string firstName { get; private set; }
-		public string secondName { get; private set; }
-		public string middleName { get; private set; }
-		public decimal fee { get; protected set; }           
+		[DataMember]
+		public int ID { get; set; }
+		[DataMember]
+		public string firstName { get; set; }
+		[DataMember]
+		public string secondName { get; set; }
+		[DataMember]
+		public string middleName { get; set; }
+		[DataMember]
+		public decimal fee { get; set; }
+		[DataMember]
 		public decimal rate { get; set; }
+		[DataMember]
 		public decimal bounty { get; set; }
-		public readonly DateTime birthday;
+		[DataMember]
+		public DateTime birthday;
 
 		public Employee()
 		{
@@ -31,7 +38,7 @@ namespace Lab1
 			fee = 0;
 			rate = 0;
 			bounty = 0;
-			birthday = DateTime.MinValue;
+			birthday = new DateTime(2000, 1, 1);
 		}
 
 		public Employee
@@ -51,13 +58,17 @@ namespace Lab1
 			middleName = _middleName;
 			rate = _rate;
 			bounty = _bounty;
+			birthday = _birthday;
 		}
 
-		public virtual void avgFeeCompute() { return; }
+		public abstract void avgFeeCompute();
 	}
 
+	[DataContract(Name = "EmployeeFixedFee")]
 	public class EmployeeFixedFee : Employee
 	{
+		public EmployeeFixedFee() { return; }
+
 		public EmployeeFixedFee
 			(
 			int _ID,
@@ -75,8 +86,11 @@ namespace Lab1
 		public override void avgFeeCompute() { fee = rate + bounty; }
 	}
 
+	[DataContract(Name = "EmployeeHourlyFee")]
 	public class EmployeeHourlyFee : Employee
 	{
+		public EmployeeHourlyFee() { return; }
+
 		public EmployeeHourlyFee
 			(
 			int _ID,
@@ -116,11 +130,18 @@ namespace Lab1
 		}
 	}
 
+	[KnownType(typeof(Employee))]
+	[KnownType(typeof(EmployeeFixedFee))]
+	[KnownType(typeof(EmployeeHourlyFee))]
+	[DataContract]
 	public class Organization
 	{
-		public List<Employee> list;          
-		public int numOfEmpl {  get; private set; }
-		public decimal avgFee { get; private set; }
+		[DataMember]
+		public List<Employee> list { get; set; }
+		[DataMember]
+		public int numOfEmpl { get; set; }
+		[DataMember]
+		public decimal avgFee { get; set; }
 
 		public Organization()
 		{
@@ -147,7 +168,6 @@ namespace Lab1
 			for (int i = 0; i < newEmployee.Length; i++)
 				this.add(newEmployee[i]);
 			numOfEmpl += newEmployee.Length;
-			sort();
 		}
 
 		public void del(int ID)
@@ -182,29 +202,23 @@ namespace Lab1
 
 		public void jsonOutput(string fileName)
 		{
-			JavaScriptSerializer serializer = new JavaScriptSerializer();
-			string strObj = serializer.Serialize(this);
-			StreamWriter writer = new StreamWriter(fileName);
-			writer.Write(strObj);
-			writer.Close();
+			DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(Organization));
+			StreamWriter w = new StreamWriter(fileName);
+			serializer.WriteObject(w.BaseStream, this);
+			w.Close();
 		}
 
 		public void jsonInput(string fileName)
 		{
 			StreamReader reader = new StreamReader(fileName);
-			string strObj = reader.ReadToEnd();
-			JavaScriptSerializer serializer = new JavaScriptSerializer();
-			Organization newOrg = serializer.Deserialize<Organization>(strObj);
+			DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(Organization));
+			Organization newOrg = (Organization)serializer.ReadObject(reader.BaseStream);
 			reader.Close();
-
-			if (numOfEmpl == 0)
-				numOfEmpl = newOrg.numOfEmpl;
 
 			int size = newOrg.numOfEmpl;
 			for (int i = 0; i < size; i++)
-				add(list[i]);
+				add(newOrg.list[i]);
 			avgFeeCompute();
-			numOfEmpl += newOrg.numOfEmpl;
 		}
 
 		public void xmlOutput(string fileName)
@@ -222,13 +236,9 @@ namespace Lab1
 			Organization newOrg = (Organization)serializer.Deserialize(reader);
 			reader.Close();
 
-			if (numOfEmpl == 0)
-				numOfEmpl = newOrg.numOfEmpl;
-
 			int size = newOrg.numOfEmpl;
 			for (int i = 0; i < size; i++)
-				add(list[i]);
-			numOfEmpl += newOrg.numOfEmpl;
+				add(newOrg.list[i]);
 			avgFeeCompute();
 		}
 	}
@@ -382,14 +392,20 @@ namespace Lab1
 	{
 		static void Main(string[] args)
 		{
-			EmployeeFixedFee e1 = new EmployeeFixedFee(0, "FirstName1", "SecondName1", "MiddleName1", 10, 0, DateTime.MinValue);
-			EmployeeFixedFee e2 = new EmployeeFixedFee(1, "FirstName2", "SecondName2", "MiddleName2", 30, 0, DateTime.MinValue);
-			EmployeeFixedFee e3 = new EmployeeFixedFee(2, "FirstName3", "SecondName3", "MiddleName3", 20, 0, DateTime.MinValue);
-			EmployeeFixedFee e4 = new EmployeeFixedFee(4, "FirstName4", "SecondName4", "MiddleName4", 5, 0, DateTime.MinValue);
-			EmployeeHourlyFee e5 = new EmployeeHourlyFee(5, "FirstName5", "SecondName5", "MiddleName5", 2, 20, DateTime.MinValue);
-			EmployeeFixedFee e6 = new EmployeeFixedFee(6, "FirstName6", "SecondName6", "MiddleName6", 10, 50, DateTime.MinValue);
-			EmployeeHourlyFee e7 = new EmployeeHourlyFee(7, "FirstName7", "SecondName7", "MiddleName7", 2, 0, DateTime.MinValue);
-			EmployeeFixedFee e8 = new EmployeeFixedFee(8, "FirstName8", "SecondName8", "MiddleName8", 8, 0, DateTime.MinValue);
+			Organization o = new Organization();
+			Menu.run(o);
+		}
+
+		static void test()
+		{
+			EmployeeFixedFee e1 = new EmployeeFixedFee(0, "FirstName1", "SecondName1", "MiddleName1", 10, 0, new DateTime(2000, 1, 1));
+			EmployeeFixedFee e2 = new EmployeeFixedFee(1, "FirstName2", "SecondName2", "MiddleName2", 30, 0, new DateTime(2000, 1, 1));
+			EmployeeFixedFee e3 = new EmployeeFixedFee(2, "FirstName3", "SecondName3", "MiddleName3", 20, 0, new DateTime(2000, 1, 1));
+			EmployeeFixedFee e4 = new EmployeeFixedFee(4, "FirstName4", "SecondName4", "MiddleName4", 5, 0, new DateTime(2000, 1, 1));
+			EmployeeHourlyFee e5 = new EmployeeHourlyFee(5, "FirstName5", "SecondName5", "MiddleName5", 2, 20, new DateTime(2000, 1, 1));
+			EmployeeFixedFee e6 = new EmployeeFixedFee(6, "FirstName6", "SecondName6", "MiddleName6", 10, 50, new DateTime(2000, 1, 1));
+			EmployeeHourlyFee e7 = new EmployeeHourlyFee(7, "FirstName7", "SecondName7", "MiddleName7", 2, 0, new DateTime(2000, 1, 1));
+			EmployeeFixedFee e8 = new EmployeeFixedFee(8, "FirstName8", "SecondName8", "MiddleName8", 8, 0, new DateTime(2000, 1, 1));
 
 			Organization o = new Organization();
 
@@ -403,7 +419,6 @@ namespace Lab1
 			o.add(e8);
 
 			o.sort();
-
 			Menu.run(o);
 		}
 	}
