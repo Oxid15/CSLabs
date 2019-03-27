@@ -1,9 +1,9 @@
 ﻿using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Xml.Serialization;
-using System.Runtime.Serialization;
 
 namespace Lab1
 {
@@ -64,7 +64,7 @@ namespace Lab1
 		public abstract void avgFeeCompute();
 	}
 
-	[DataContract(Name = "EmployeeFixedFee")]
+	[DataContract]
 	public class EmployeeFixedFee : Employee
 	{
 		public EmployeeFixedFee() { return; }
@@ -86,7 +86,7 @@ namespace Lab1
 		public override void avgFeeCompute() { fee = rate + bounty; }
 	}
 
-	[DataContract(Name = "EmployeeHourlyFee")]
+	[DataContract]
 	public class EmployeeHourlyFee : Employee
 	{
 		public EmployeeHourlyFee() { return; }
@@ -204,42 +204,67 @@ namespace Lab1
 		{
 			DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(Organization));
 			StreamWriter w = new StreamWriter(fileName);
-			serializer.WriteObject(w.BaseStream, this);
+			try { serializer.WriteObject(w.BaseStream, this); }
+			catch(SerializationException e)
+			{
+				Console.WriteLine("Output Error");
+				throw e;
+			}
 			w.Close();
 		}
 
 		public void jsonInput(string fileName)
 		{
-			StreamReader reader = new StreamReader(fileName);
-			DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(Organization));
-			Organization newOrg = (Organization)serializer.ReadObject(reader.BaseStream);
-			reader.Close();
-
-			int size = newOrg.numOfEmpl;
-			for (int i = 0; i < size; i++)
-				add(newOrg.list[i]);
-			avgFeeCompute();
+			try
+			{
+				StreamReader reader = new StreamReader(fileName);
+				DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(Organization));
+				Organization newOrg = (Organization)serializer.ReadObject(reader.BaseStream);
+				int size = newOrg.numOfEmpl;
+				for (int i = 0; i < size; i++)
+					add(newOrg.list[i]);
+				avgFeeCompute();
+				reader.Close();
+			}
+			catch(SerializationException e)
+			{
+				Console.WriteLine("Input Error");
+				throw e;
+			}
 		}
 
 		public void xmlOutput(string fileName)
 		{
 			XmlSerializer serializer = new XmlSerializer(typeof(Organization));
 			TextWriter writer = new StreamWriter(fileName);
-			serializer.Serialize(writer, this);
+			try { serializer.Serialize(writer, this); }
+			catch(SerializationException e)
+			{
+				Console.WriteLine("Output Error");
+				throw e;
+			}
 			writer.Close();
 		}
 
 		public void xmlInput(string fileName)
 		{
-			TextReader reader = new StreamReader(fileName);
-			XmlSerializer serializer = new XmlSerializer(typeof(Organization));
-			Organization newOrg = (Organization)serializer.Deserialize(reader);
-			reader.Close();
+			try
+			{
+				TextReader reader = new StreamReader(fileName);
+				XmlSerializer serializer = new XmlSerializer(typeof(Organization));
+				Organization newOrg = (Organization)serializer.Deserialize(reader);
+				reader.Close();
 
-			int size = newOrg.numOfEmpl;
-			for (int i = 0; i < size; i++)
-				add(newOrg.list[i]);
-			avgFeeCompute();
+				int size = newOrg.numOfEmpl;
+				for (int i = 0; i < size; i++)
+					add(newOrg.list[i]);
+				avgFeeCompute();
+			}
+			catch (SerializationException e)
+			{
+				Console.WriteLine("Input Error");
+				throw e;
+			}
 		}
 	}
 
@@ -395,7 +420,6 @@ namespace Lab1
 			Organization o = new Organization();
 			Menu.run(o);
 		}
-
 		static void test()
 		{
 			EmployeeFixedFee e1 = new EmployeeFixedFee(0, "FirstName1", "SecondName1", "MiddleName1", 10, 0, new DateTime(2000, 1, 1));
