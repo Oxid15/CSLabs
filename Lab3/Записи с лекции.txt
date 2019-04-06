@@ -1,0 +1,5 @@
+habr.com/ru/post/314518
+Работа с API
+
+habr.com/ru/company/mailru/blog/115163
+OAuth 2.0 простым и понятным языком
