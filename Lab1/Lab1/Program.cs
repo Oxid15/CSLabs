@@ -62,6 +62,16 @@ namespace Lab1
 		}
 
 		public abstract void avgFeeCompute();
+
+		public static string[] parseName(string name)
+		{
+			return name.Split(' ');
+		}
+
+		public static string[] parseBDay(string input)
+		{
+			return input.Split('.');
+		}
 	}
 
 	[DataContract]
@@ -268,8 +278,184 @@ namespace Lab1
 		}
 	}
 
-	class Menu
+	abstract class Menu
 	{
+		public static void employeeInfoOut(Employee e)
+		{
+			Console.Write(e.ID);
+			Console.Write(" ");
+			Console.Write(e.secondName);
+			Console.Write(" ");
+			Console.Write(e.firstName);
+			Console.Write(" ");
+			Console.Write(e.middleName);
+			Console.Write(" ");
+			Console.Write(e.fee);
+			Console.Write("\n");
+		}
+
+		private static int consoleGetInt(string message)
+		{
+			Console.WriteLine(message);
+			string strID = Console.ReadLine();
+			try
+			{
+				return int.Parse(strID);
+			}
+			catch (FormatException e)
+			{
+				Console.WriteLine("\nFormat Error\n");
+				return 0;
+				throw e;
+			}
+		}
+
+		private static string[] consoleGetStrName()
+		{
+			Console.WriteLine("Enter the second first and middle names of the employee \nin following order\n");
+			string strName = Console.ReadLine();
+			try
+			{
+				return Employee.parseName(strName);
+			}
+			catch(FormatException e)
+			{
+				Console.WriteLine("\nFormat Error\n");
+				throw e;
+			}
+		}
+
+		private static decimal consoleGetDecimal(string message)
+		{
+			Console.WriteLine(message);
+			string strRate = Console.ReadLine();
+			try
+			{
+				return decimal.Parse(strRate);
+			}
+			catch(FormatException e)
+			{
+				Console.WriteLine("\nFormat Error\n");
+				throw e;
+			}
+		}
+
+		private static DateTime consoleGetDateTime(string message)
+		{
+			Console.WriteLine(message);
+			string[] bDay = Employee.parseBDay(Console.ReadLine());
+			try
+			{
+				return new DateTime(int.Parse(bDay[2]), int.Parse(bDay[1]), int.Parse(bDay[0]));
+			}
+			catch(FormatException e)
+			{
+				Console.WriteLine("\nFormat Error\n");
+				throw e;
+			}
+		}
+
+		private static bool consoleGetBoolean(string message, string trueValue, string falseValue)
+		{
+			Console.WriteLine(message);
+			string inputType = Console.ReadLine();
+
+			if (inputType == trueValue)
+				return false;
+			else if (inputType == falseValue)
+				return true;
+
+			return false;
+		}
+
+		public static void addEmployee(Organization org)
+		{
+			string[] name = consoleGetStrName();
+			if (consoleGetBoolean("Enter the type of the employee\n \"fixed\" or\n \"hourly\"\n", "", ""))
+			{
+				EmployeeHourlyFee newEmployee =
+					new EmployeeHourlyFee(
+						consoleGetInt("Enter the ID of the new employee\n"),
+						name[1],//first
+						name[0],//second
+						name[2],//middle
+						consoleGetDecimal("Enter the rate of the employee"),
+						consoleGetDecimal("Enter the bounty of the employee, if there isn't - enter \"0\""),
+						consoleGetDateTime("Enter the birthday of the employee\nDD.MM.YYYY\n")
+						);
+
+				Console.WriteLine("Proceed the adding?\n\n");
+				employeeInfoOut(newEmployee);
+				if (consoleGetBoolean("Enter \"yes\" or \"no\"...", "yes", "no"))
+				{
+					org.add(newEmployee);
+					return;
+				}
+				else return;
+			}
+			else
+			{
+				EmployeeFixedFee newEmployee = 
+					new EmployeeFixedFee(
+						consoleGetInt("Enter the ID of the new employee\n"),
+						name[1],//first
+						name[0],//second
+						name[2],//middle
+						consoleGetDecimal("Enter the rate of the employee"),
+						consoleGetDecimal("Enter the bounty of the employee, if there isn't - enter \"0\""),
+						consoleGetDateTime("Enter the birthday of the employee\nDD.MM.YYYY\n")
+						);
+
+				Console.WriteLine("Proceed the adding?\n\n");
+				employeeInfoOut(newEmployee);
+				if (consoleGetBoolean("Enter \"yes\" or \"no\"...", "yes", "no"))
+				{
+					org.add(newEmployee);
+					return;
+				}
+				else return;
+			}
+		}
+
+		public static void info(Organization org)
+		{
+			Console.Write("\n");
+			for (int i = 0; i < org.numOfEmpl; i++)
+			{
+				employeeInfoOut(org.list[i]);
+			}
+			Console.Write("\n");
+		}
+
+		public static void topFive(Organization org)
+		{
+			Console.Write("\n");
+			for (int i = 0; i < org.numOfEmpl && i < 5; i++)
+			{
+				employeeInfoOut(org.list[i]);
+			}
+			Console.Write("\n");
+		}
+
+		public static void bottomThree(Organization org)
+		{
+			List<Employee> lastThree = new List<Employee>();
+			for (int i = (org.numOfEmpl - 1); i >= org.numOfEmpl - 3 && i >= 0; i--)
+			{
+				lastThree.Add(org.list[i]);
+			}
+
+			FeeComparer comparer = new FeeComparer();
+			lastThree.Sort(comparer);
+
+			Console.Write("\n");
+			for (int i = 0; i < 3; i++)
+			{
+				employeeInfoOut(lastThree[i]);
+			}
+			Console.Write("\n");
+		}
+
 		public static void run(Organization org)
 		{
 			while (true)
@@ -284,6 +470,7 @@ namespace Lab1
 						"5 - xml output\n" +
 						"6 - json input\n" +
 						"7 - xml input\n" +
+						"8 - add employee\n" +
 						"9 - clear console\n" +
 						"0 - exit\n\n"
 					);
@@ -349,6 +536,13 @@ namespace Lab1
 					Console.ReadKey();
 					continue;
 				}
+				if (key.Key == ConsoleKey.D8)
+				{
+					addEmployee(org);
+					Console.WriteLine("Press any key...\n");
+					Console.ReadKey();
+					continue;
+				}
 				if (key.Key == ConsoleKey.D9)
 				{
 					Console.Clear();
@@ -357,59 +551,6 @@ namespace Lab1
 				if (key.Key == ConsoleKey.D0)
 					return;
 			}
-		}
-
-		public static void employeeInfoOut(Employee e)
-		{
-			Console.Write(e.ID);
-			Console.Write(" ");
-			Console.Write(e.secondName);
-			Console.Write(" ");
-			Console.Write(e.firstName);
-			Console.Write(" ");
-			Console.Write(e.middleName);
-			Console.Write(" ");
-			Console.Write(e.fee);
-			Console.Write("\n");
-		}
-
-		public static void info(Organization org)
-		{
-			Console.Write("\n");
-			for (int i = 0; i < org.numOfEmpl; i++)
-			{
-				employeeInfoOut(org.list[i]);
-			}
-			Console.Write("\n");
-		}
-
-		public static void topFive(Organization org)
-		{
-			Console.Write("\n");
-			for (int i = 0; i < org.numOfEmpl && i < 5; i++)
-			{
-				employeeInfoOut(org.list[i]);
-			}
-			Console.Write("\n");
-		}
-
-		public static void bottomThree(Organization org)
-		{
-			List<Employee> lastThree = new List<Employee>();
-			for (int i = (org.numOfEmpl - 1); i >= org.numOfEmpl - 3 && i >= 0; i--)
-			{
-				lastThree.Add(org.list[i]);
-			}
-
-			FeeComparer comparer = new FeeComparer();
-			lastThree.Sort(comparer);
-
-			Console.Write("\n");
-			for (int i = 0; i < 3; i++)
-			{
-				employeeInfoOut(lastThree[i]);
-			}
-			Console.Write("\n");
 		}
 	}
 
