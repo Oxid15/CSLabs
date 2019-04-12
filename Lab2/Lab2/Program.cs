@@ -4,7 +4,7 @@
 using System.Text.RegularExpressions;
 using System.Net;
 using System;
-//using System.IO;
+using System.IO;
 using System.Collections.Generic;
 
 namespace Lab2
@@ -16,7 +16,7 @@ namespace Lab2
 		static Stack<string> currentPath;
 		public string root { private set; get; }
 		public delegate void searchResult(string result, int depth);
-		public event searchResult target;
+		public event searchResult onTarget;
 
 		public Analyzer(string _root)
 		{
@@ -26,17 +26,30 @@ namespace Lab2
 			currentPath = new Stack<string>();
 		}
 
+		bool isLinkInternal(string link)//FIXME
+		{
+			if (link[0] == 'h')
+				return false;
+			else if (link[0] == '<')
+				return true;
+			else
+				return true;
+		}
+
+		//causes the nonexpected missing of first characters in some links
 		static string htmlLinkToURI(string htmlLink)
 		{
-			//FIXME: does not work well with links without quotes
+			//passes the <a href="/
 			int i = 0;
 			while (i < 9)
 				i++;
-			
+			i++;
 			string URI = "";
-			int j = 0;
-			while (htmlLink[i] != '\"')
+			
+			while (htmlLink[i] != '>')
 			{
+				if (htmlLink[i] == '\"')
+					return URI;
 				URI += htmlLink[i];
 				i++;
 			}
@@ -45,19 +58,27 @@ namespace Lab2
 
 		public string[] findLinksOnPage(string pageURI)
 		{
-			string page = client.DownloadString(new Uri(pageURI));
-			MatchCollection matches = Regex.Matches(page, @"<a href=[""\/\w-\.:]+>");
-
-			string[] links = new string[matches.Count];
-			int size = matches.Count;
-			for(int i = 0; i < size;i++)
+			try
 			{
-				links[i] = matches[i].ToString();
+				string page = client.DownloadString(new Uri(pageURI));
+				MatchCollection matches = Regex.Matches(page, @"<a href=[""\/\w-\.:]+>");
+
+				string[] links = new string[matches.Count];
+				int size = matches.Count;
+				for (int i = 0; i < size; i++)
+				{
+					links[i] = matches[i].ToString();
+				}
+				return links;
 			}
-			return links;
+			catch(WebException ex)
+			{
+				Console.WriteLine(ex.Message);
+				return null;
+			}
 		}
 
-		public void recSearch(string thisURI, int maxPages = 10000, int depth = 0)
+		public void recSearch(string thisURI, int maxPages = 1000, int depth = 0)
 		{
 			if (depth == 5 || visitedLinks.Count == maxPages)
 				return;
@@ -67,32 +88,46 @@ namespace Lab2
 				currentPath.Push(thisURI);
 
 				string[] links = findLinksOnPage(thisURI);
-				foreach (string link in links)
+				if (links != null)
 				{
-					recSearch(root + htmlLinkToURI(link), maxPages, depth + 1);
-					if (currentPath.Peek() != root)
-						currentPath.Pop();
+					foreach (string link in links)
+					{
+						if (isLinkInternal(link))
+							recSearch(root + htmlLinkToURI(link), maxPages, depth + 1);
+						else
+							onTarget(link, depth);
+					}
 				}
 			}
+		}
+
+		public void fileOutput(string fileName)
+		{
+			File.WriteAllLines(fileName, visitedLinks);
 		}
 	}
 
 	class AnalyzerHandler
 	{
-		//AnalyzerHandler(string csvFileName)
-		//{
+		string fileName;
 
-		//}
+		public AnalyzerHandler(string _csvFileName)
+		{
+			fileName = _csvFileName;
+		}
 
-		//public void writeLinkCsv(string str, int depth)
-		//{
+		public void writeLinkCsv(string str, int depth)
+		{
+			string[] strA = new string[1];
+			strA[0] = str;
 
-		//}
+			File.WriteAllLines(fileName, strA);
+		}
 
-		//public void writeLinkConsole(string str, int depth)
-		//{
-
-		//}
+		public void writeLinkConsole(string str, int depth)
+		{
+			Console.WriteLine(str + " - "+ depth.ToString());
+		}
 	}
 
 	class Program
@@ -100,7 +135,10 @@ namespace Lab2
 		static void Main(string[] args)
 		{
 			Analyzer a = new Analyzer( "https://www.susu.ru/");
-			a.recSearch(a.root); 
+			AnalyzerHandler h = new AnalyzerHandler("links.csv");
+			a.onTarget += h.writeLinkConsole;
+			a.recSearch(a.root);
+			a.fileOutput("links.csv");
 		}
 	}
 }
