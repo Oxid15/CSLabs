@@ -1,4 +1,7 @@
-﻿using System.Text.RegularExpressions;
+﻿//вопросы:
+//1. как извлекать имена html ссылок 
+
+using System.Text.RegularExpressions;
 using System.Net;
 using System;
 //using System.IO;
@@ -10,26 +13,26 @@ namespace Lab2
 	{
 		WebClient client;
 		static SortedSet<string> visitedLinks;
+		static Stack<string> currentPath;
 		public string root { private set; get; }
+		public delegate void searchResult(string result, int depth);
+		public event searchResult target;
 
 		public Analyzer(string _root)
 		{
 			root = _root;
 			client = new WebClient();
 			visitedLinks = new SortedSet<string>();
+			currentPath = new Stack<string>();
 		}
 
 		static string htmlLinkToURI(string htmlLink)
 		{
 			//FIXME: does not work well with links without quotes
 			int i = 0;
-			while (htmlLink[i] != '\"')
+			while (i < 9)
 				i++;
-			i++;
-			//skip a '/' character 
-			if (htmlLink[i] == '/')
-				i++;
-
+			
 			string URI = "";
 			int j = 0;
 			while (htmlLink[i] != '\"')
@@ -54,29 +57,42 @@ namespace Lab2
 			return links;
 		}
 
-		public void recSearch(string thisURI, int depth = 0)
+		public void recSearch(string thisURI, int maxPages = 10000, int depth = 0)
 		{
-			if (depth == 5)
+			if (depth == 5 || visitedLinks.Count == maxPages)
 				return;
 			else if (!visitedLinks.Contains(thisURI))
 			{
 				visitedLinks.Add(thisURI);
+				currentPath.Push(thisURI);
 
 				string[] links = findLinksOnPage(thisURI);
-				///////////////////////////TEST
-				foreach (string item in links)
-					Console.WriteLine(item);
-				Console.ReadKey();
-				Console.Clear();
-				///////////////////////////TEST
 				foreach (string link in links)
 				{
-					if (link == "<a href=/contact/feedback/susu/ru>")
-							Console.WriteLine("ы");
-					recSearch(root + htmlLinkToURI(link), depth + 1);
+					recSearch(root + htmlLinkToURI(link), maxPages, depth + 1);
+					if (currentPath.Peek() != root)
+						currentPath.Pop();
 				}
 			}
 		}
+	}
+
+	class AnalyzerHandler
+	{
+		//AnalyzerHandler(string csvFileName)
+		//{
+
+		//}
+
+		//public void writeLinkCsv(string str, int depth)
+		//{
+
+		//}
+
+		//public void writeLinkConsole(string str, int depth)
+		//{
+
+		//}
 	}
 
 	class Program
