@@ -14,8 +14,8 @@ namespace Lab2
 		WebClient client;
 		static SortedSet<string> visitedLinks;
 		static Stack<string> currentPath;
-		public string root { private set; get; }
-		public delegate void searchResult(string result, int depth);
+		public string root { set; get; }
+		public delegate void searchResult(string[] result, int depth);
 		public event searchResult onTarget;
 
 		public Analyzer(string _root)
@@ -26,14 +26,43 @@ namespace Lab2
 			currentPath = new Stack<string>();
 		}
 
-		bool isLinkInternal(string link)//FIXME
+		bool isLinkExternal(string link)
 		{
-			if (link[0] == 'h')
+			int len = link.Length;
+			if (!link.Contains("http"))
 				return false;
-			else if (link[0] == '<')
-				return true;
 			else
-				return true;
+			{
+				string _root = root;
+
+				if (_root.Contains("www."))
+					_root.Remove(_root.IndexOf("www."), 4);
+
+				if (link.Contains("www."))
+					link.Remove(link.IndexOf("www."), 4);
+
+				int _rootLen = _root.Length;
+				for (int i = 0; i < _rootLen; i++)
+				{
+					if (_root[i] == link[i])
+						continue;
+					else
+						return true;
+				}
+				return false;
+			}
+		}
+
+		//deletes http(s)://.../
+		static string cutHttp_s_rootURI(string link)
+		{
+			if (!link.Contains("http"))
+				return link;
+
+			int i = link.IndexOf("//") + 2;
+			while (link[i] != '/')
+				i++;
+			return link.Remove(0, i + 1);
 		}
 
 		//causes the nonexpected missing of first characters in some links
@@ -43,7 +72,8 @@ namespace Lab2
 			int i = 0;
 			while (i < 9)
 				i++;
-			i++;
+			if (htmlLink[i] == '/')	i++;
+
 			string URI = "";
 			
 			while (htmlLink[i] != '>')
@@ -92,10 +122,20 @@ namespace Lab2
 				{
 					foreach (string link in links)
 					{
-						if (isLinkInternal(link))
-							recSearch(root + htmlLinkToURI(link), maxPages, depth + 1);
+						string URI = htmlLinkToURI(link);
+						if (!isLinkExternal(URI))
+							recSearch
+								(
+									root + cutHttp_s_rootURI(URI),
+									maxPages, 
+									depth + 1
+								);
 						else
-							onTarget(link, depth);
+						{
+							string[] targetPath = currentPath.ToArray();
+							onTarget(targetPath, depth);
+						}
+						Console.WriteLine(URI);
 					}
 				}
 			}
@@ -116,17 +156,19 @@ namespace Lab2
 			fileName = _csvFileName;
 		}
 
-		public void writeLinkCsv(string str, int depth)
-		{
-			string[] strA = new string[1];
-			strA[0] = str;
+		//public void writeLinkCsv(string[] str, int depth)
+		//{
+		//	FileStream file = new FileStream("links.csv", FileMode.Open, FileAccess.Write);
+		//	StreamWriter w = new StreamWriter(file);
 
-			File.WriteAllLines(fileName, strA);
-		}
+		//}
 
-		public void writeLinkConsole(string str, int depth)
+		public void writeLinkConsole(string[] str, int depth)
 		{
-			Console.WriteLine(str + " - "+ depth.ToString());
+			foreach(string s in str)
+			{
+				Console.WriteLine(s);
+			}
 		}
 	}
 
@@ -134,11 +176,28 @@ namespace Lab2
 	{
 		static void Main(string[] args)
 		{
-			Analyzer a = new Analyzer( "https://www.susu.ru/");
-			AnalyzerHandler h = new AnalyzerHandler("links.csv");
-			a.onTarget += h.writeLinkConsole;
-			a.recSearch(a.root);
-			a.fileOutput("links.csv");
+			//Analyzer a = new Analyzer( "https://www.susu.ru/");
+			//AnalyzerHandler h = new AnalyzerHandler("links.csv");
+			//a.onTarget += h.writeLinkConsole;
+			//a.recSearch(a.root);
+			//a.fileOutput("links.csv");
+
+			Stack<string> stack = new Stack<string>();
+			stack.Push("string0");
+			stack.Push("string1");
+			stack.Push("string2");
+			stack.Push("string3");
+
+			string[] arr = stack.ToArray();
+			string[] arr2 = new string[arr.Length];
+
+			for(int i = arr.Length - 1, j = 0; i >= 0;i--, j++)
+			{
+				arr2[j] = arr[i];
+			}
+
+			AnalyzerHandler h1 = new AnalyzerHandler("links.csv");
+			//h1.writeLinkCsv(arr2,4);
 		}
 	}
 }
