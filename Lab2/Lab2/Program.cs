@@ -1,5 +1,5 @@
 ﻿//вопросы:
-//1. как извлекать имена html ссылок 
+//1. как извлекать имена html ссылок если регулярное выражение читает только сам адрес
 
 using System.Text.RegularExpressions;
 using System.Net;
@@ -65,7 +65,6 @@ namespace Lab2
 			return link.Remove(0, i + 1);
 		}
 
-		//causes the nonexpected missing of first characters in some links
 		static string htmlLinkToURI(string htmlLink)
 		{
 			//passes the <a href="/
