@@ -12,15 +12,18 @@ namespace Lab2
 		public string rootURI { get; set; } // "www.sitename" or "sitename"
 		public string bodyURI { get; set; } // "/page_1/page_2/.../page_n"
 		public string domain { get; set; }  // ".ru"
+		int depth;
 
 		public Link()
 		{
 			isHttps = false;
 			rootURI = "";
+			bodyURI = "";
 			domain = "";
+			depth = 0;
 		}
 
-		//public Link(string link)
+		//public Link(string link, int _depth)
 		//{
 		//	if (link.Contains("https"))
 		//		isHttps = true;
@@ -46,23 +49,22 @@ namespace Lab2
 				domain.Add(link[i]);
 				i++;
 			}
-				
 
 			string result = new string(domain.ToArray());
 			return result;
 		}
 
-		public string getLink()
-		{
-			if(isHttps)
-			{
-				return "https://";
-			}
-			else
-			{
-				return "http://";
-			}
-		}
+		//public string getLink()
+		//{
+		//	if(isHttps)
+		//	{
+		//		return "https://";
+		//	}
+		//	else
+		//	{
+		//		return "http://";
+		//	}
+		//}
 	}
 
 	class Analyzer
@@ -256,24 +258,7 @@ namespace Lab2
 			//AnalyzerHandler h = new AnalyzerHandler("links.csv");
 			//a.onTarget += h.writeLinkConsole;
 			//a.recSearch(a.root);
-			//a.fileOutput("links.csv");
-
-			//Stack<string> stack = new Stack<string>();
-			//stack.Push("string0");
-			//stack.Push("string1");
-			//stack.Push("string2");
-			//stack.Push("string3");
-
-			//string[] arr = stack.ToArray();
-			//string[] arr2 = new string[arr.Length];
-
-			//for (int i = arr.Length - 1, j = 0; i >= 0; i--, j++)
-			//{
-			//	arr2[j] = arr[i];
-			//}
-
-			//AnalyzerHandler h1 = new AnalyzerHandler("links.csv");
-			//h1.writeLinkConsole(arr2, 4);
+			//a.fileOutput("visitedLinks.csv");
 
 			//Link link = new Link("https://www.susu.ru/");
 		}
