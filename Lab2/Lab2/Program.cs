@@ -1,7 +1,4 @@
-﻿//вопросы:
-//1. как извлекать имена html ссылок если регулярное выражение читает только сам адрес
-
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 using System.Net;
 using System;
 using System.IO;
@@ -9,11 +6,71 @@ using System.Collections.Generic;
 
 namespace Lab2
 {
+	class Link
+	{
+		public bool isHttps { get; set; }
+		public string rootURI { get; set; } // "www.sitename" or "sitename"
+		public string bodyURI { get; set; } // "/page_1/page_2/.../page_n"
+		public string domain { get; set; }  // ".ru"
+
+		public Link()
+		{
+			isHttps = false;
+			rootURI = "";
+			domain = "";
+		}
+
+		//public Link(string link)
+		//{
+		//	if (link.Contains("https"))
+		//		isHttps = true;
+		//	else
+		//		isHttps = false;
+
+		//	domain = obtainDomain(link);
+
+
+		//}
+
+		static public string obtainDomain(string link)
+		{
+			int dotIndex = link.Length - 1;
+			while (link[dotIndex] != '.')
+			{
+				dotIndex--;
+			}
+			int i = dotIndex + 1;
+			List<char> domain = new List<char>();
+			while (link[i] != '/')
+			{
+				domain.Add(link[i]);
+				i++;
+			}
+				
+
+			string result = new string(domain.ToArray());
+			return result;
+		}
+
+		public string getLink()
+		{
+			if(isHttps)
+			{
+				return "https://";
+			}
+			else
+			{
+				return "http://";
+			}
+		}
+	}
+
 	class Analyzer
 	{
 		WebClient client;
 		static SortedSet<string> visitedLinks;
 		static Stack<string> currentPath;
+		private string currentPage;
 		public string root { set; get; }
 		public delegate void searchResult(string[] result, int depth);
 		public event searchResult onTarget;
@@ -24,6 +81,16 @@ namespace Lab2
 			client = new WebClient();
 			visitedLinks = new SortedSet<string>();
 			currentPath = new Stack<string>();
+		}
+
+		string[] strArrayReverse(string[] arr)
+		{
+			string[] reversed = new string[arr.Length];
+			for (int i = 0, j = arr.Length; i < arr.Length; i++, j--)
+			{
+				reversed[i] = arr[j];
+			}
+			return reversed;
 		}
 
 		bool isLinkExternal(string link)
@@ -89,8 +156,8 @@ namespace Lab2
 		{
 			try
 			{
-				string page = client.DownloadString(new Uri(pageURI));
-				MatchCollection matches = Regex.Matches(page, @"<a href=[""\/\w-\.:]+>");
+				currentPage = client.DownloadString(new Uri(pageURI));
+				MatchCollection matches = Regex.Matches(currentPage, @"<a href=[""\/\w-\.:]+>");
 
 				string[] links = new string[matches.Count];
 				int size = matches.Count;
@@ -107,6 +174,17 @@ namespace Lab2
 			}
 		}
 
+		private string[] findExternalLinks(string[] links)
+		{
+			List<string> external = new List<string>();
+			foreach (string link in links)
+				if (isLinkExternal(link))
+					external.Add(link);
+			if(links.Length != 0)
+				return external.ToArray();
+			else return null;
+		}
+
 		public void recSearch(string thisURI, int maxPages = 1000, int depth = 0)
 		{
 			if (depth == 5 || visitedLinks.Count == maxPages)
@@ -117,23 +195,25 @@ namespace Lab2
 				currentPath.Push(thisURI);
 
 				string[] links = findLinksOnPage(thisURI);
+				string[] external = findExternalLinks(links);
+				if (external != null)
+					foreach (string link in external)
+						onTarget(strArrayReverse(currentPath.ToArray()),depth);
+
 				if (links != null)
 				{
 					foreach (string link in links)
 					{
 						string URI = htmlLinkToURI(link);
-						if (!isLinkExternal(URI))
-							recSearch
-								(
-									root + cutHttp_s_rootURI(URI),
-									maxPages, 
-									depth + 1
-								);
-						else
-						{
-							string[] targetPath = currentPath.ToArray();
-							onTarget(targetPath, depth);
-						}
+						recSearch
+							(
+								root + cutHttp_s_rootURI(URI),
+								maxPages, 
+								depth + 1
+							);
+
+						currentPath.Pop();
+
 						Console.WriteLine(URI);
 					}
 				}
@@ -164,10 +244,7 @@ namespace Lab2
 
 		public void writeLinkConsole(string[] str, int depth)
 		{
-			foreach(string s in str)
-			{
-				Console.WriteLine(s);
-			}
+			Console.WriteLine(str[str.Length - 1]);
 		}
 	}
 
@@ -175,28 +252,30 @@ namespace Lab2
 	{
 		static void Main(string[] args)
 		{
-			//Analyzer a = new Analyzer( "https://www.susu.ru/");
+			//Analyzer a = new Analyzer("https://www.susu.ru/");
 			//AnalyzerHandler h = new AnalyzerHandler("links.csv");
 			//a.onTarget += h.writeLinkConsole;
 			//a.recSearch(a.root);
 			//a.fileOutput("links.csv");
 
-			Stack<string> stack = new Stack<string>();
-			stack.Push("string0");
-			stack.Push("string1");
-			stack.Push("string2");
-			stack.Push("string3");
+			//Stack<string> stack = new Stack<string>();
+			//stack.Push("string0");
+			//stack.Push("string1");
+			//stack.Push("string2");
+			//stack.Push("string3");
 
-			string[] arr = stack.ToArray();
-			string[] arr2 = new string[arr.Length];
+			//string[] arr = stack.ToArray();
+			//string[] arr2 = new string[arr.Length];
 
-			for(int i = arr.Length - 1, j = 0; i >= 0;i--, j++)
-			{
-				arr2[j] = arr[i];
-			}
+			//for (int i = arr.Length - 1, j = 0; i >= 0; i--, j++)
+			//{
+			//	arr2[j] = arr[i];
+			//}
 
-			AnalyzerHandler h1 = new AnalyzerHandler("links.csv");
-			//h1.writeLinkCsv(arr2,4);
+			//AnalyzerHandler h1 = new AnalyzerHandler("links.csv");
+			//h1.writeLinkConsole(arr2, 4);
+
+			//Link link = new Link("https://www.susu.ru/");
 		}
 	}
 }
