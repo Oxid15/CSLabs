@@ -6,14 +6,16 @@ using System.Collections.Generic;
 
 namespace Lab2
 {
-	class Link
+	class Link : IComparable
 	{
-		public bool isHttps { get; set; }   //https
-		public bool hasWWW { get; set; }    //www
+		public bool isRoot { get; set; }
+		public bool isExternal { get; set; } 
+		public bool isHttps { get; set; }   // "https"
+		public bool hasWWW { get; set; }    // "www"
 		public string rootURI { get; set; } // "sitename"
 		public string domain { get; set; }  // "com"
-		public string bodyURI { get; set; } // "/page_1/page_2/.../page_n"
-		int depth;
+		public string bodyURI { get; set; } // "page_1/page_2/.../page_n"
+		public int depth { get; set; }
 
 		public Link()
 		{
@@ -25,8 +27,11 @@ namespace Lab2
 			depth = 0;
 		}
 
-		public Link(string link, int _depth = 0)
+		public Link(string link, bool _isExternal = false, bool _isRoot = false, int _depth = 0)
 		{
+			isRoot = _isRoot;
+			isExternal = _isExternal;
+
 			if (link.Contains("https"))
 				isHttps = true;
 			else
@@ -36,18 +41,21 @@ namespace Lab2
 				hasWWW = true;
 			else
 				hasWWW = false;
-
+		
 			rootURI = obtainRoot(link);
 
-			domain = obtainDomain(link);
+			domain = obtainDomain(link, isRoot);
 
 			bodyURI = obtainBody(link);
 
 			depth = _depth;
 		}
 
-		public Link(string root, string _bodyURI, int _depth = 0)
+		public Link(string root, string _bodyURI,bool _isExternal = false, int _depth = 0)
 		{
+			isRoot = false;
+			isExternal = _isExternal;
+
 			if (root.Contains("https"))
 				isHttps = true;
 			else
@@ -62,7 +70,16 @@ namespace Lab2
 
 			domain = obtainDomain(root, true);
 
-			bodyURI = _bodyURI;
+			bodyURI = obtainBody(_bodyURI);
+
+			depth = _depth;
+		}
+
+		public static bool isLinkExternal(Link link, Link root)
+		{
+			if (link.rootURI == root.rootURI)
+				return false;
+			return true;
 		}
 
 		private string obtainRoot(string link)
@@ -70,10 +87,14 @@ namespace Lab2
 			int i = link.IndexOf("//");
 			if (i >= 0)
 			{
-				i += 6; //skip "//www."
+				if (hasWWW)
+					i += 6; //skip "//www."
+				else
+					i += 2; //skip "//"
 
 				List<char> root = new List<char>();
-				while (link[i] != '.')
+				int n = link.LastIndexOf(".");
+				while (i < n)
 				{
 					root.Add(link[i]);
 					i++;
@@ -88,19 +109,15 @@ namespace Lab2
 
 		private string obtainDomain(string link, bool isRoot = false)
 		{
-			int dotIndex = link.Length - 1;
-			if (dotIndex >= 0)
+			int dotIndex = link.LastIndexOf(".");
+			if (dotIndex >= 0 && link.Contains("."))
 			{
-				while (link[dotIndex] != '.')
-				{
-					dotIndex--;
-				}
-
 				List<char> domain = new List<char>();
 				if (!isRoot)
 				{
-					int i = dotIndex + 1;
-					while (link[i] != '/')
+					int i = link.LastIndexOf(".") + 1;
+					int len = link.Length;
+					while (i < len && link[i] != '/')
 					{
 						domain.Add(link[i]);
 						i++;
@@ -126,23 +143,53 @@ namespace Lab2
 		private string obtainBody(string link)
 		{
 			int len = link.Length;
-			if(domain != "")
+			if(!isRoot)
 			{
-				int first = link.IndexOf(domain) + domain.Length;
-				List<char> body = new List<char>();
-				for (int i = first; i < len; i++)
-				{
-					body.Add(link[i]);
-				}
-				if (body.Count != 0)
-				{
-					string result = new string(body.ToArray());
-					return result;
-				}
+				int first;
+				if (link.Contains("//"))
+					first = link.IndexOf("/", link.IndexOf("//") + 2);
+				else if(link[0] != '/')
+					first = 0;
 				else
+					first = 1;
+
+				if (first >= 0)
+				{
+					List<char> body = new List<char>();
+					for (int i = first; i < len; i++)
+					{
+						body.Add(link[i]);
+					}
+					if (body.Count != 0)
+					{
+						string result = new string(body.ToArray());
+						return result;
+					}
+				}
+				else if (link.Contains("http"))
 					return "";
+				else
+					return link;
 			}
-			return link;
+			return "";
+		}
+
+		public int CompareTo(object obj)
+		{
+			try
+			{
+				Link other = (Link)obj;
+				if (rootURI == other.rootURI &&
+					bodyURI == other.bodyURI)
+					return 0;
+				else
+					return 1;
+			}
+			catch(ArgumentException e)
+			{
+				Console.WriteLine(e.Message);
+				return -1;
+			}
 		}
 
 		public override string ToString()
@@ -159,87 +206,65 @@ namespace Lab2
 			else
 				wwwDot = "";
 
-			return http_s + "://" + wwwDot + rootURI + "." + domain + bodyURI;
+			return http_s + "://" + wwwDot + rootURI + "." + domain + "/" + bodyURI;
 		}
 	}
 
 	class Analyzer
 	{
 		WebClient client;
-		static SortedSet<string> visitedLinks;
-		static Stack<string> currentPath;
+		static SortedSet<Link> visitedLinks;
+		static Stack<Link> currentPath;
 		private string currentPage;
-		public string root { set; get; }
-		public delegate void searchResult(string[] result, int depth);
+		public Link root { set; get; }
+		public delegate void searchResult(Stack<Link> result);
 		public event searchResult onTarget;
 
 		public Analyzer(string _root)
 		{
-			root = _root;
+			root = new Link(_root, false, true, 0);
 			client = new WebClient();
-			visitedLinks = new SortedSet<string>();
-			currentPath = new Stack<string>();
+			visitedLinks = new SortedSet<Link>();
+			currentPath = new Stack<Link>();
 		}
 
-		string[] strArrayReverse(string[] arr)
+		public List<Link> findLinksOnPage(Link link, int depth)
 		{
-			string[] reversed = new string[arr.Length];
-			for (int i = 0, j = arr.Length; i < arr.Length; i++, j--)
+			List<Link> links = new List<Link>();
+			try
 			{
-				reversed[i] = arr[j];
-			}
-			return reversed;
-		}
+				currentPage = client.DownloadString(new Uri(link.ToString()));
+				MatchCollection matches = Regex.Matches(currentPage, @"<a href=[""\/\w-\.:]+>");
 
-		bool isLinkExternal(string link)
-		{
-			int len = link.Length;
-			if (!link.Contains("http"))
-				return false;
-			else
-			{
-				string _root = root;
-
-				if (_root.Contains("www."))
-					_root.Remove(_root.IndexOf("www."), 4);
-
-				if (link.Contains("www."))
-					link.Remove(link.IndexOf("www."), 4);
-
-				int _rootLen = _root.Length;
-				for (int i = 0; i < _rootLen; i++)
+				int size = matches.Count;
+				for (int i = 0; i < size; i++)
 				{
-					if (_root[i] == link[i])
-						continue;
+					if (matches[i].ToString().Contains("http"))
+						links.Add(new Link(htmlLinkToURI(matches[i].ToString()), false, false, depth));
 					else
-						return true;
+					{
+						links.Add(new Link(root.ToString(),htmlLinkToURI(matches[i].ToString()), false, depth));
+					}
 				}
-				return false;
+				return links;
+			}
+			catch(WebException ex)
+			{
+				Console.WriteLine(ex.Message);
+				return links;
 			}
 		}
 
-		//deletes http(s)://.../
-		static string cutHttp_s_rootURI(string link)
+		private string htmlLinkToURI(string htmlLink)
 		{
-			if (!link.Contains("http"))
-				return link;
-
-			int i = link.IndexOf("//") + 2;
-			while (link[i] != '/')
-				i++;
-			return link.Remove(0, i + 1);
-		}
-
-		static string htmlLinkToURI(string htmlLink)
-		{
-			//passes the <a href="/
+			//skips the <a href="/
 			int i = 0;
 			while (i < 9)
 				i++;
-			if (htmlLink[i] == '/')	i++;
+			if (htmlLink[i] == '/') i++;
 
 			string URI = "";
-			
+
 			while (htmlLink[i] != '>')
 			{
 				if (htmlLink[i] == '\"')
@@ -250,77 +275,69 @@ namespace Lab2
 			return URI;
 		}
 
-		public string[] findLinksOnPage(string pageURI)
+		private List<Link> findExternalLinks(List<Link> links)
 		{
-			try
-			{
-				currentPage = client.DownloadString(new Uri(pageURI));
-				MatchCollection matches = Regex.Matches(currentPage, @"<a href=[""\/\w-\.:]+>");
-
-				string[] links = new string[matches.Count];
-				int size = matches.Count;
-				for (int i = 0; i < size; i++)
+			List<Link> external = new List<Link>();
+			foreach (Link item in links)
+				if (Link.isLinkExternal(item, root))
 				{
-					links[i] = matches[i].ToString();
+					external.Add(item);
+					item.isExternal = true;
 				}
-				return links;
-			}
-			catch(WebException ex)
-			{
-				Console.WriteLine(ex.Message);
-				return null;
-			}
+				else
+					item.isExternal = false;
+				return external;
 		}
 
-		private string[] findExternalLinks(string[] links)
+		public void recSearch(Link thisLink,int maxDepth = 5, int maxPages = 1000, int depth = 0)
 		{
-			List<string> external = new List<string>();
-			foreach (string link in links)
-				if (isLinkExternal(link))
-					external.Add(link);
-			if(links.Length != 0)
-				return external.ToArray();
-			else return null;
-		}
-
-		public void recSearch(string thisURI, int maxPages = 1000, int depth = 0)
-		{
-			if (depth == 5 || visitedLinks.Count == maxPages)
+			if (depth == maxDepth || visitedLinks.Count == maxPages)
 				return;
-			else if (!visitedLinks.Contains(thisURI))
+			else if (!visitedLinks.Contains(thisLink))
 			{
-				visitedLinks.Add(thisURI);
-				currentPath.Push(thisURI);
+				visitedLinks.Add(thisLink);
+				currentPath.Push(thisLink);
 
-				string[] links = findLinksOnPage(thisURI);
-				string[] external = findExternalLinks(links);
-				if (external != null)
-					foreach (string link in external)
-						onTarget(strArrayReverse(currentPath.ToArray()),depth);
-
-				if (links != null)
-				{
-					foreach (string link in links)
+				List<Link> links = findLinksOnPage(thisLink, depth + 1);
+				List<Link> external = findExternalLinks(links);
+				if (external.Count != 0)
+					foreach (Link link in external)
 					{
-						string URI = htmlLinkToURI(link);
-						recSearch
-							(
-								root + cutHttp_s_rootURI(URI),
-								maxPages, 
-								depth + 1
-							);
-
+						currentPath.Push(link);
+						onTarget(currentPath);
 						currentPath.Pop();
+					}
+	
+				if (links.Count != 0)
+				{
+					foreach (Link link in links)
+					{
+						if (!link.isExternal)
+							recSearch
+								(link, maxDepth, maxPages, depth + 1);
+						else
+							continue;
 
-						Console.WriteLine(URI);
+						if(currentPath.Count > 1)
+							currentPath.Pop();
+
+						Console.WriteLine(link.ToString());
 					}
 				}
 			}
 		}
 
-		public void fileOutput(string fileName)
+		public void visitedLinksCsvOut(string fileName)
 		{
-			File.WriteAllLines(fileName, visitedLinks);
+			FileStream file = new FileStream(fileName, FileMode.Open, FileAccess.Write);
+			StreamWriter w = new StreamWriter(file);
+			foreach (Link link in visitedLinks)
+			{
+				w.Write(link.ToString());
+				w.Write(";");
+				w.WriteLine(link.depth);
+			}
+			w.Close();
 		}
 	}
 
@@ -333,16 +350,38 @@ namespace Lab2
 			fileName = _csvFileName;
 		}
 
-		//public void writeLinkCsv(string[] str, int depth)
-		//{
-		//	FileStream file = new FileStream("links.csv", FileMode.Open, FileAccess.Write);
-		//	StreamWriter w = new StreamWriter(file);
-
-		//}
-
-		public void writeLinkConsole(string[] str, int depth)
+		public void writeLinkCsv(Stack<Link> path)
 		{
-			Console.WriteLine(str[str.Length - 1]);
+			FileStream file = new FileStream(fileName, FileMode.Open, FileAccess.Write);
+			StreamWriter w = new StreamWriter(file);
+			List<Link> links = new List<Link>(path);
+			links.Reverse();
+
+			foreach (Link link in links)
+			{
+				for (int i = 0; i < link.depth; i++)
+					w.Write(".");
+				w.Write(" ");
+				w.Write(link.ToString());
+				w.Write(";");
+				w.WriteLine(link.depth);
+			}
+			w.Close();
+		}
+
+		public void writeLinkConsole(Stack<Link> path)
+		{
+			List<Link> links = new List<Link>(path);
+			links.Reverse();
+			foreach(Link link in links)
+			{
+				for (int i = 0; i < link.depth; i++)
+					Console.Write(".");
+				Console.Write(" ");
+				Console.Write(link.ToString());
+				Console.Write(" - ");
+				Console.WriteLine(link.depth);
+			}
 		}
 	}
 
@@ -350,16 +389,15 @@ namespace Lab2
 	{
 		static void Main(string[] args)
 		{
-			//Analyzer a = new Analyzer("https://www.susu.ru/");
-			//AnalyzerHandler h = new AnalyzerHandler("links.csv");
-			//a.onTarget += h.writeLinkConsole;
-			//a.recSearch(a.root);
-			//a.fileOutput("visitedLinks.csv");
+			Analyzer a = new Analyzer("https://www.susu.ru");
+			AnalyzerHandler h = new AnalyzerHandler("links.csv");
 
-			Link link = new Link("https://www.susu.ru/en/arts-and-culture/russian-museum-branch");
-			Link link1 = new Link("https://www.susu.ru", "/en/athletics");
-			Console.WriteLine(link.ToString());
-			Console.WriteLine(link1.ToString());
+			a.onTarget += h.writeLinkConsole;
+			a.onTarget += h.writeLinkCsv;
+
+			a.recSearch(a.root,100, 50000, 0);
+			Console.WriteLine("---END---");
+			a.visitedLinksCsvOut("visitedLinks.csv");
 			Console.ReadKey();
 		}
 	}
