@@ -8,63 +8,159 @@ namespace Lab2
 {
 	class Link
 	{
-		public bool isHttps { get; set; }
-		public string rootURI { get; set; } // "www.sitename" or "sitename"
+		public bool isHttps { get; set; }   //https
+		public bool hasWWW { get; set; }    //www
+		public string rootURI { get; set; } // "sitename"
+		public string domain { get; set; }  // "com"
 		public string bodyURI { get; set; } // "/page_1/page_2/.../page_n"
-		public string domain { get; set; }  // ".ru"
 		int depth;
 
 		public Link()
 		{
 			isHttps = false;
+			hasWWW = true;
 			rootURI = "";
-			bodyURI = "";
 			domain = "";
+			bodyURI = "";
 			depth = 0;
 		}
 
-		//public Link(string link, int _depth)
-		//{
-		//	if (link.Contains("https"))
-		//		isHttps = true;
-		//	else
-		//		isHttps = false;
-
-		//	domain = obtainDomain(link);
-
-
-		//}
-
-		static public string obtainDomain(string link)
+		public Link(string link, int _depth = 0)
 		{
-			int dotIndex = link.Length - 1;
-			while (link[dotIndex] != '.')
-			{
-				dotIndex--;
-			}
-			int i = dotIndex + 1;
-			List<char> domain = new List<char>();
-			while (link[i] != '/')
-			{
-				domain.Add(link[i]);
-				i++;
-			}
+			if (link.Contains("https"))
+				isHttps = true;
+			else
+				isHttps = false;
 
-			string result = new string(domain.ToArray());
-			return result;
+			if (link.Contains("www"))
+				hasWWW = true;
+			else
+				hasWWW = false;
+
+			rootURI = obtainRoot(link);
+
+			domain = obtainDomain(link);
+
+			bodyURI = obtainBody(link);
+
+			depth = _depth;
 		}
 
-		//public string getLink()
-		//{
-		//	if(isHttps)
-		//	{
-		//		return "https://";
-		//	}
-		//	else
-		//	{
-		//		return "http://";
-		//	}
-		//}
+		public Link(string root, string _bodyURI, int _depth = 0)
+		{
+			if (root.Contains("https"))
+				isHttps = true;
+			else
+				isHttps = false;
+
+			if (root.Contains("www"))
+				hasWWW = true;
+			else
+				hasWWW = false;
+
+			rootURI = obtainRoot(root);
+
+			domain = obtainDomain(root, true);
+
+			bodyURI = _bodyURI;
+		}
+
+		private string obtainRoot(string link)
+		{
+			int i = link.IndexOf("//");
+			if (i >= 0)
+			{
+				i += 6; //skip "//www."
+
+				List<char> root = new List<char>();
+				while (link[i] != '.')
+				{
+					root.Add(link[i]);
+					i++;
+				}
+
+				string result = new string(root.ToArray());
+				return result;
+			}
+			else
+				return "";
+		}
+
+		private string obtainDomain(string link, bool isRoot = false)
+		{
+			int dotIndex = link.Length - 1;
+			if (dotIndex >= 0)
+			{
+				while (link[dotIndex] != '.')
+				{
+					dotIndex--;
+				}
+
+				List<char> domain = new List<char>();
+				if (!isRoot)
+				{
+					int i = dotIndex + 1;
+					while (link[i] != '/')
+					{
+						domain.Add(link[i]);
+						i++;
+					}
+				}
+				else
+				{
+					int n = link.Length;
+					if (link[n - 1] == '/')
+						n -= 1;
+
+					for (int i = dotIndex + 1; i < n; i++)
+						domain.Add(link[i]);
+				}
+
+				string result = new string(domain.ToArray());
+				return result;
+			}
+			else
+				return "";
+		}
+
+		private string obtainBody(string link)
+		{
+			int len = link.Length;
+			if(domain != "")
+			{
+				int first = link.IndexOf(domain) + domain.Length;
+				List<char> body = new List<char>();
+				for (int i = first; i < len; i++)
+				{
+					body.Add(link[i]);
+				}
+				if (body.Count != 0)
+				{
+					string result = new string(body.ToArray());
+					return result;
+				}
+				else
+					return "";
+			}
+			return link;
+		}
+
+		public override string ToString()
+		{
+			string http_s;
+			if (isHttps)
+				http_s = "https";
+			else
+				http_s = "http";
+
+			string wwwDot;
+			if (hasWWW)
+				wwwDot = "www.";
+			else
+				wwwDot = "";
+
+			return http_s + "://" + wwwDot + rootURI + "." + domain + bodyURI;
+		}
 	}
 
 	class Analyzer
@@ -260,7 +356,11 @@ namespace Lab2
 			//a.recSearch(a.root);
 			//a.fileOutput("visitedLinks.csv");
 
-			//Link link = new Link("https://www.susu.ru/");
+			Link link = new Link("https://www.susu.ru/en/arts-and-culture/russian-museum-branch");
+			Link link1 = new Link("https://www.susu.ru", "/en/athletics");
+			Console.WriteLine(link.ToString());
+			Console.WriteLine(link1.ToString());
+			Console.ReadKey();
 		}
 	}
 }
