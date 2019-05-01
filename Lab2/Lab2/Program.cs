@@ -94,6 +94,10 @@ namespace Lab2
 
 				List<char> root = new List<char>();
 				int n = link.LastIndexOf(".");
+				int s = link.IndexOf("/", i);
+
+				if (s>= 0 && s < n)
+					n = link.IndexOf(".", link.IndexOf(".") + 1); // www.(1)sitename.(2)com/...
 				while (i < n)
 				{
 					root.Add(link[i]);
@@ -179,11 +183,7 @@ namespace Lab2
 			try
 			{
 				Link other = (Link)obj;
-				if (rootURI == other.rootURI &&
-					bodyURI == other.bodyURI)
-					return 0;
-				else
-					return 1;
+				return (this.ToString().CompareTo(other.ToString()));
 			}
 			catch(ArgumentException e)
 			{
@@ -226,6 +226,8 @@ namespace Lab2
 			client = new WebClient();
 			visitedLinks = new SortedSet<Link>();
 			currentPath = new Stack<Link>();
+
+			currentPath.Push(root);
 		}
 
 		public List<Link> findLinksOnPage(Link link, int depth)
@@ -242,9 +244,7 @@ namespace Lab2
 					if (matches[i].ToString().Contains("http"))
 						links.Add(new Link(htmlLinkToURI(matches[i].ToString()), false, false, depth));
 					else
-					{
 						links.Add(new Link(root.ToString(),htmlLinkToURI(matches[i].ToString()), false, depth));
-					}
 				}
 				return links;
 			}
@@ -295,8 +295,13 @@ namespace Lab2
 				return;
 			else if (!visitedLinks.Contains(thisLink))
 			{
+				Console.Write(thisLink.ToString());
+				Console.Write(" - ");
+				Console.Write(thisLink.depth);
+				Console.Write(" - ");
+				Console.WriteLine(visitedLinks.Count);
+
 				visitedLinks.Add(thisLink);
-				currentPath.Push(thisLink);
 
 				List<Link> links = findLinksOnPage(thisLink, depth + 1);
 				List<Link> external = findExternalLinks(links);
@@ -313,15 +318,12 @@ namespace Lab2
 					foreach (Link link in links)
 					{
 						if (!link.isExternal)
-							recSearch
-								(link, maxDepth, maxPages, depth + 1);
-						else
-							continue;
-
-						if(currentPath.Count > 1)
-							currentPath.Pop();
-
-						Console.WriteLine(link.ToString());
+						{
+							currentPath.Push(link);
+							recSearch(link, maxDepth, maxPages, depth + 1);
+							if (currentPath.Count > 1)
+								currentPath.Pop();
+						}
 					}
 				}
 			}
@@ -352,7 +354,7 @@ namespace Lab2
 
 		public void writeLinkCsv(Stack<Link> path)
 		{
-			FileStream file = new FileStream(fileName, FileMode.Open, FileAccess.Write);
+			FileStream file = new FileStream(fileName, FileMode.Append, FileAccess.Write);
 			StreamWriter w = new StreamWriter(file);
 			List<Link> links = new List<Link>(path);
 			links.Reverse();
@@ -376,7 +378,7 @@ namespace Lab2
 			foreach(Link link in links)
 			{
 				for (int i = 0; i < link.depth; i++)
-					Console.Write(".");
+					Console.Write(" ");
 				Console.Write(" ");
 				Console.Write(link.ToString());
 				Console.Write(" - ");
@@ -395,7 +397,7 @@ namespace Lab2
 			a.onTarget += h.writeLinkConsole;
 			a.onTarget += h.writeLinkCsv;
 
-			a.recSearch(a.root,100, 50000, 0);
+			a.recSearch(a.root,50, 1000000, 0);
 			Console.WriteLine("---END---");
 			a.visitedLinksCsvOut("visitedLinks.csv");
 			Console.ReadKey();
