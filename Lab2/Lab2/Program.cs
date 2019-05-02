@@ -147,17 +147,17 @@ namespace Lab2
 		private string obtainBody(string link)
 		{
 			int len = link.Length;
-			if(!isRoot)
-			{
+			if(!isRoot && link.Length > 0)
+			{ 
 				int first;
 				if (link.Contains("//"))
-					first = link.IndexOf("/", link.IndexOf("//") + 2);
+					first = link.IndexOf("/", link.IndexOf("//") + 2) + 1;
 				else if(link[0] != '/')
 					first = 0;
 				else
 					first = 1;
 
-				if (first >= 0)
+				if (first > 0)
 				{
 					List<char> body = new List<char>();
 					for (int i = first; i < len; i++)
@@ -397,7 +397,7 @@ namespace Lab2
 			a.onTarget += h.writeLinkConsole;
 			a.onTarget += h.writeLinkCsv;
 
-			a.recSearch(a.root,50, 1000000, 0);
+			a.recSearch(a.root,10000, 1000000, 0);
 			Console.WriteLine("---END---");
 			a.visitedLinksCsvOut("visitedLinks.csv");
 			Console.ReadKey();
