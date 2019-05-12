@@ -56,6 +56,8 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Web" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -73,10 +75,37 @@
     <Compile Include="Form1.Designer.cs">
       <DependentUpon>Form1.cs</DependentUpon>
     </Compile>
+    <Compile Include="SnippetForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="SnippetForm.Designer.cs">
+      <DependentUpon>SnippetForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="UserInfoForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="UserInfoForm.Designer.cs">
+      <DependentUpon>UserInfoForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="LabelsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="LabelsForm.Designer.cs">
+      <DependentUpon>LabelsForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SnippetForm.resx">
+      <DependentUpon>SnippetForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="UserInfoForm.resx">
+      <DependentUpon>UserInfoForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="LabelsForm.resx">
+      <DependentUpon>LabelsForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -87,6 +116,7 @@
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <None Include="jsconfig1.json" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
